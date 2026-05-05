@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Minha Biblioteca{% endblock %}
+{% block content %}
+
+<div class="search-header">
+    <h2>Minha Biblioteca</h2>
+    <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Pesquisar por autor ou título...">
+        <button id="search-button">🔍</button>
+    </div>
+</div>
+
+<div id="book-list" class="book-grid">
+    {% for book in books %}
+        <a href="{% url 'book_detail' book.id %}" target="_blank" class="book-link">
+            <div class="book-card show">
+                <img src="{{ book.image_url|default:'/static/img/default-book.png' }}" alt="Capa de {{ book.title }}" class="book-cover">
+                <h3 class="book-title">{{ book.title }}</h3>
+                <p class="book-author">{{ book.author }}</p>
+
+                {% if book.avg_rating %}
+                    {% if book.avg_rating|floatformat:0 == book.avg_rating|stringformat:"d" %}
+                        <p class="book-rating">⭐ {{ book.avg_rating|floatformat:0 }} de 5</p>
+                    {% else %}
+                        <p class="book-rating">⭐ {{ book.avg_rating|floatformat:1 }} de 5</p>
+                    {% endif %}
+                {% else %}
+                    <p class="book-rating">Ainda sem avaliações</p>
+                {% endif %}
+
+                <p class="book-reviews">{{ book.review_count|default:0 }} avaliações</p>
+            </div>
+        </a>
+    {% empty %}
+        <p>Nenhum livro cadastrado.</p>
+    {% endfor %}
+</div>
+
+<script>
+document.getElementById("search-button").addEventListener("click", function() {
+  const query = document.getElementById("search-input").value.trim();
+  if (query) {
+    window.open(`/catalogo/search/?q=${encodeURIComponent(query)}`, "_blank");
+  }
+});
+</script>
+
+{% endblock %}

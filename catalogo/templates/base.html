@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <title>{% block title %}Biblioteca{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'catalogo/style.css' %}">
+    <script src="{% static 'catalogo/script.js' %}" defer></script>
+</head>
+<body>
+    <!-- Botão para abrir sidebar -->
+    <button id="toggleSidebar" class="sidebar-toggle">☰ Menu</button>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <!-- Logo da sidebar (sempre branca) -->
+        <img id="logo-sidebar" src="{% static 'catalogo/img/logo-clara.png' %}" alt="Logo Sidebar" class="logo">
+        <a href="{% url 'book_list' %}">📚 Livros</a>
+        <a href="{% url 'search_results' %}">🔎 Biblioteca</a>
+        <a href="/admin/">⚙️ Admin</a>
+        <button id="darkModeToggle" class="sidebar-darkmode">🌙</button>
+    </aside>
+
+    <!-- Overlay -->
+    <div id="overlay" class="overlay"></div>
+
+    <!-- Conteúdo principal -->
+    <div class="content">
+        <header class="page-header">
+            <!-- Logo principal (alterna conforme dark mode) -->
+            <img id="logo-main" src="{% static 'catalogo/img/logo-escura.png' %}" alt="Logo Principal" class="logo">
+            <h1>Avalivro</h1>
+            <p class="subtitle">Gerencie seus livros e avaliações</p>
+        </header>
+
+        <!-- Container para mensagens JS -->
+        <div id="message-container"></div>
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

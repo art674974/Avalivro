@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="book-detail-container">
+    <!-- Coluna esquerda: capa -->
+    <div class="book-left">
+        <img src="{{ book.image_url|default:'/static/catalogo/img/default-book.png' }}" alt="Capa do livro" class="book-cover-large">
+    </div>
+
+    <!-- Coluna direita: informações + avaliação -->
+    <div class="book-right">
+        <h2>{{ book.title }}</h2>
+        <p><strong>Autor:</strong> {{ book.author }}</p>
+
+        <!-- Nota média em estrelas -->
+        <div class="avg-rating">
+            {% if book.avg_rating %}
+                <div class="stars-display">
+                    {% with avg=book.avg_rating|floatformat:0|default:0 %}
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= avg %}
+                                <span class="star filled">★</span>
+                            {% else %}
+                                <span class="star">★</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                    <span class="rating-value">{{ book.avg_rating|floatformat:1 }}/5</span>
+                </div>
+            {% else %}
+                <p>Ainda sem avaliações</p>
+            {% endif %}
+        </div>
+
+        <!-- Formulário de avaliação -->
+        <h3>Adicionar Avaliação</h3>
+        <form method="post" id="review-form">
+            {% csrf_token %}
+            <div class="star-rating" id="star-rating-widget">
+                <span data-value="1" class="star-select">☆</span>
+                <span data-value="2" class="star-select">☆</span>
+                <span data-value="3" class="star-select">☆</span>
+                <span data-value="4" class="star-select">☆</span>
+                <span data-value="5" class="star-select">☆</span>
+            </div>
+            <input type="hidden" name="rating" id="rating-value" value="">
+            <textarea name="comment" rows="4" placeholder="Escreva seu comentário..." required></textarea>
+            <button type="submit" class="btn-submit">Enviar Avaliação</button>
+        </form>
+    </div>
+</div>
+
+<!-- Comentários -->
+<div class="comments-section">
+    <h3>Comentários ({{ reviews|length }})</h3>
+    <div class="comments-grid">
+        {% for review in reviews %}
+            <div class="comment-card">
+                <div class="comment-stars">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= review.rating %}
+                            <span class="star filled">★</span>
+                        {% else %}
+                            <span class="star">★</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <p class="comment-text">{{ review.comment }}</p>
+                <small class="comment-date">{{ review.created_at|date:"d/m/Y H:i" }}</small>
+            </div>
+        {% empty %}
+            <p class="no-comments">Nenhum comentário ainda. Seja o primeiro a avaliar!</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Configuração do widget de estrelas
+    const stars = document.querySelectorAll("#star-rating-widget .star-select");
+    const ratingInput = document.getElementById("rating-value");
+    let selectedRating = 0;
+
+    // Função para atualizar a aparência das estrelas baseado na nota selecionada
+    function updateStars(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.textContent = "★";
+                star.classList.add("selected");
+            } else {
+                star.textContent = "☆";
+                star.classList.remove("selected");
+            }
+        });
+    }
+
+    // Função para atualizar estrelas durante hover
+    function updateStarsHover(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.textContent = "★";
+            } else {
+                star.textContent = "☆";
+            }
+        });
+    }
+
+    // Adicionar evento de clique em cada estrela
+    stars.forEach(star => {
+        star.addEventListener("click", function(e) {
+            e.preventDefault();
+            selectedRating = parseInt(this.dataset.value);
+            ratingInput.value = selectedRating;
+            updateStars(selectedRating);
+        });
+
+        // Efeito hover - mostra apenas as estrelas até a atual
+        star.addEventListener("mouseenter", function() {
+            const hoverValue = parseInt(this.dataset.value);
+            updateStarsHover(hoverValue);
+        });
+    });
+
+    // Restaurar aparência ao sair do hover
+    const starContainer = document.getElementById("star-rating-widget");
+    starContainer.addEventListener("mouseleave", function() {
+        updateStars(selectedRating);
+    });
+
+    // Submissão do formulário via AJAX
+    const form = document.getElementById("review-form");
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        if (!selectedRating) {
+            showMessage("Por favor, selecione uma nota de 1 a 5 estrelas.", "error");
+            return;
+        }
+
+        const formData = new FormData(this);
+
+        fetch(window.location.href, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            showMessage("Avaliação enviada com sucesso!", "success");
+
+            // Resetar formulário
+            form.reset();
+            selectedRating = 0;
+            ratingInput.value = "";
+            updateStars(0);
+
+            // Atualizar a nota média na página
+            const avgRatingValue = document.querySelector(".rating-value");
+            if (avgRatingValue && data.avg_rating) {
+                avgRatingValue.textContent = data.avg_rating.toFixed(1) + "/5";
+
+                // Atualizar estrelas de média
+                const avgStars = document.querySelectorAll(".avg-rating .star");
+                const avgInt = Math.round(data.avg_rating);
+                avgStars.forEach((star, idx) => {
+                    if (idx < avgInt) {
+                        star.classList.add("filled");
+                    } else {
+                        star.classList.remove("filled");
+                    }
+                });
+            }
+
+            // Recarregar a página para mostrar o novo comentário
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        })
+        .catch(error => {
+            console.error("Erro:", error);
+            showMessage("Erro ao enviar avaliação. Tente novamente.", "error");
+        });
+    });
+});
+</script>
+
+<style>
+/* Estilos adicionais para estrelas mais bonitas */
+.star-rating {
+    display: flex;
+    gap: 8px;
+    margin: 15px 0;
+    justify-content: flex-start;
+}
+
+.star-rating .star-select {
+    font-size: 32px;
+    cursor: pointer;
+    color: #ccc;
+    transition: all 0.2s ease;
+    user-select: none;
+    outline: none;
+    display: inline-block;
+    line-height: 1;
+}
+
+/* Remove qualquer contorno de foco */
+.star-rating .star-select:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.star-rating .star-select:hover {
+    transform: scale(1.1);
+    color: #ffc107;
+}
+
+.star-rating .star-select.selected {
+    color: #ffc107;
+    text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+}
+
+.stars-display {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.stars-display .star {
+    font-size: 20px;
+    color: #ccc;
+}
+
+.stars-display .star.filled {
+    color: #ffc107;
+}
+
+.rating-value {
+    margin-left: 10px;
+    font-size: 14px;
+    color: #666;
+}
+
+.comment-card {
+    transition: transform 0.2s ease;
+}
+
+.comment-card:hover {
+    transform: translateX(5px);
+}
+
+.comment-text {
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.comment-date {
+    font-size: 12px;
+    color: #999;
+}
+
+.no-comments {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+}
+
+body.dark .star-rating .star-select {
+    color: #666;
+}
+
+body.dark .star-rating .star-select.selected {
+    color: #ffc107;
+}
+
+body.dark .rating-value {
+    color: #aaa;
+}
+
+body.dark .comment-date {
+    color: #777;
+}
+
+body.dark .no-comments {
+    color: #777;
+}
+</style>
+{% endblock %}

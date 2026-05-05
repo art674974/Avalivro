@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Resultados da Pesquisa{% endblock %}
+{% block content %}
+
+<div class="search-header">
+    <h2>Resultados da Pesquisa</h2>
+    <div class="search-bar">
+        <input type="text" id="search-input" value="{{ query|default:'' }}" placeholder="Pesquisar...">
+        <button id="search-button">🔍</button>
+    </div>
+</div>
+
+<div class="filters">
+    <label>Ordenar por:</label>
+    <select id="filter-select">
+        {% if filter_by == "title" %}<option value="title" selected>Título</option>{% else %}<option value="title">Título</option>{% endif %}
+        {% if filter_by == "author" %}<option value="author" selected>Autor</option>{% else %}<option value="author">Autor</option>{% endif %}
+        {% if filter_by == "avg_rating" %}<option value="avg_rating" selected>Nota média</option>{% else %}<option value="avg_rating">Nota média</option>{% endif %}
+        {% if filter_by == "review_count" %}<option value="review_count" selected>Qtd. avaliações</option>{% else %}<option value="review_count">Qtd. avaliações</option>{% endif %}
+    </select>
+
+    <select id="order-select">
+        {% if order == "asc" %}<option value="asc" selected>Crescente</option>{% else %}<option value="asc">Crescente</option>{% endif %}
+        {% if order == "desc" %}<option value="desc" selected>Decrescente</option>{% else %}<option value="desc">Decrescente</option>{% endif %}
+    </select>
+</div>
+
+<div class="alphabet-filter">
+    {% for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" %}
+        <button type="button" class="alphabet-btn" data-char="{{ char }}">{{ char }}</button>
+    {% endfor %}
+</div>
+
+<div class="book-grid">
+    {% if books %}
+        {% for book in books %}
+            <a href="{% url 'book_detail' book.id %}" target="_blank" class="book-link">
+                <div class="book-card">
+                    <img src="{{ book.image_url|default:'/static/img/default-book.png' }}" alt="Capa de {{ book.title }}" class="book-cover">
+                    <h3 class="book-title">{{ book.title }}</h3>
+                    <p class="book-author">{{ book.author }}</p>
+
+                    {% if book.avg_rating %}
+                        {% if book.avg_rating|floatformat:0 == book.avg_rating|stringformat:"d" %}
+                            <p class="book-rating">⭐ {{ book.avg_rating|floatformat:0 }} de 5</p>
+                        {% else %}
+                            <p class="book-rating">⭐ {{ book.avg_rating|floatformat:1 }} de 5</p>
+                        {% endif %}
+                    {% else %}
+                        <p class="book-rating">Ainda sem avaliações</p>
+                    {% endif %}
+
+                    <p class="book-reviews">{{ book.review_count|default:0 }} avaliações</p>
+                </div>
+            </a>
+        {% endfor %}
+    {% else %}
+        <p>Livro inexistente/não encontrado.</p>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchBtn = document.getElementById("search-button");
+    const searchInput = document.getElementById("search-input");
+    const filterSelect = document.getElementById("filter-select");
+    const orderSelect = document.getElementById("order-select");
+
+    if (searchBtn) {
+        searchBtn.addEventListener("click", function() {
+            const query = searchInput.value.trim();
+            const filter = filterSelect.value;
+            const order = orderSelect.value;
+            let url = `/catalogo/search/?filter=${filter}&order=${order}`;
+            if (query) url += `&q=${encodeURIComponent(query)}`;
+            window.location.href = url;
+        });
+    }
+
+    document.querySelectorAll(".alphabet-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+            const char = this.dataset.char;
+            const filter = filterSelect.value;
+            const order = orderSelect.value;
+            window.location.href = `/catalogo/search/?q=${char}&filter=${filter}&order=${order}`;
+        });
+    });
+
+    function applyFilter() {
+        const query = searchInput.value.trim();
+        const filter = filterSelect.value;
+        const order = orderSelect.value;
+        let url = `/catalogo/search/?filter=${filter}&order=${order}`;
+        if (query) url += `&q=${encodeURIComponent(query)}`;
+        window.location.href = url;
+    }
+
+    if (filterSelect) filterSelect.addEventListener("change", applyFilter);
+    if (orderSelect) orderSelect.addEventListener("change", applyFilter);
+});
+</script>
+
+{% endblock %}
