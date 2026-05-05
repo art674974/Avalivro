@@ -12,3 +12,4 @@ biblioteca/__pycache__/wsgi.cpython-314.pyc
 biblioteca/__pycache__/urls.cpython-314.pyc
 biblioteca/__pycache__/settings.cpython-314.pyc
 biblioteca/__pycache__/__init__.cpython-314.pyc
+.env
